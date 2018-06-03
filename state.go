@@ -7,21 +7,20 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-const utxoBucket = "chainstate"
+const stateBucket = "chainstate"
 
 // UTXOSet represents UTXO set
-type UTXOSet struct {
+type State struct {
 	Blockchain *Blockchain
 }
 
 // FindSpendableOutputs finds and returns unspent outputs to reference in inputs
 func (u UTXOSet) FindSpendableOutputs(pubkeyHash []byte, amount int) (int, map[string][]int) {
-	unspentOutputs := make(map[string][]int)
 	accumulated := 0
 	db := u.Blockchain.db
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(utxoBucket))
+		b := tx.Bucket([]byte(stateBucket))
 		c := b.Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
@@ -51,7 +50,7 @@ func (u UTXOSet) FindUTXO(pubKeyHash []byte) []TXOutput {
 	db := u.Blockchain.db
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(utxoBucket))
+		b := tx.Bucket([]byte(stateBucket))
 		c := b.Cursor()
 
 		for k, v := c.First(); k != nil; k, v = c.Next() {
@@ -79,7 +78,7 @@ func (u UTXOSet) CountTransactions() int {
 	counter := 0
 
 	err := db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(utxoBucket))
+		b := tx.Bucket([]byte(stateBucket))
 		c := b.Cursor()
 
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
@@ -98,7 +97,7 @@ func (u UTXOSet) CountTransactions() int {
 // Reindex rebuilds the UTXO set
 func (u UTXOSet) Reindex() {
 	db := u.Blockchain.db
-	bucketName := []byte(utxoBucket)
+	bucketName := []byte(stateBucket)
 
 	err := db.Update(func(tx *bolt.Tx) error {
 		err := tx.DeleteBucket(bucketName)
@@ -144,7 +143,7 @@ func (u UTXOSet) Update(block *Block) {
 	db := u.Blockchain.db
 
 	err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(utxoBucket))
+		b := tx.Bucket([]byte(stateBucket))
 
 		for _, tx := range block.Transactions {
 			if tx.IsCoinbase() == false {
